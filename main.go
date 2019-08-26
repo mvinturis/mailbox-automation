@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mvinturis/mailbox-automation/aol"
 	"github.com/mvinturis/mailbox-automation/common/chromeuser"
 	"github.com/mvinturis/mailbox-automation/common/models"
+	"github.com/mvinturis/mailbox-automation/hotmail"
 
 	"github.com/chromedp/chromedp"
 )
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	i := 0
-	lines, err := readLines("seeds-aol.txt")
+	lines, err := readLines("seeds-hotmail.txt")
 	if err != nil {
 		fmt.Println("[ERROR] Error: %s", err)
 		return
@@ -122,9 +122,9 @@ func startActivities(seed *models.Seed) {
 	}
 
 	var params models.TaskParams
-	params.Keyword = "aol"
+	params.Keyword = "keyword to search"
 
-	runner := aol.NewRunner(seed, taskCtx)
+	runner := hotmail.NewRunner(seed, taskCtx)
 
-	runner.Start("createNewSeed", &params)
+	runner.Start("readMessages", &params)
 }
