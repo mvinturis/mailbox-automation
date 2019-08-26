@@ -7,11 +7,12 @@ mailbox-automation implements an automated runner to simulate user interaction w
 - pin/categorize/flag messages from Inbox folder;
 - move Inbox messages to Archive folder;
 
-Usage example:
+Usage example
+-------------
 
 Start the runner with a specified behavior, also configuring the seed/mailbox to run and additional parameters if needed:
 
-.. code-block:: go
+.. code-block:: python
 
 	seed := &models.Seed{
 		Email:        "test1@hotmail.com"
