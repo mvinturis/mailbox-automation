@@ -12,7 +12,7 @@ Usage example
 
 Start the runner with a specified behavior, also configuring the seed/mailbox to run and additional parameters if needed:
 
-.. code-block:: go
+.. code-block:: python
 
 	seed := &models.Seed{
 		Email:        "test1@hotmail.com"
