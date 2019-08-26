@@ -2,10 +2,14 @@ mailbox-automation
 ==================
 
 mailbox-automation implements an automated runner to simulate user interaction with a specific mailbox (Hotmail, Yahoo, Aol). The program uses Chromedp Go package to develop activities for each runner implementation. In general the runner activities are comprised of:
-* mark not spam emails from the Spam folder;
-* open messages from Inbox folder;
-* pin/categorize/flag messages from Inbox folder;
-* move Inbox messages to Archive folder;
+
+* Mark not spam emails from the Spam folder;
+
+* Open messages from Inbox folder;
+
+* Pin/categorize/flag messages from Inbox folder;
+
+* Move Inbox messages to Archive folder;
 
 Usage example
 -------------
