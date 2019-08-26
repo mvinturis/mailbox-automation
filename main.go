@@ -121,10 +121,11 @@ func startActivities(seed *models.Seed) {
 		panic(err)
 	}
 
-	var params models.TaskParams
-	params.Keyword = "keyword to search"
+	params := &models.TaskParams{
+		Keyword: "keyword to search",
+	}
 
 	runner := hotmail.NewRunner(seed, taskCtx)
 
-	runner.Start("readMessages", &params)
+	runner.Start("readMessages", params)
 }
