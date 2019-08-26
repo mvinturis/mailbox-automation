@@ -19,7 +19,7 @@ Start the runner with a specified behavior, also configuring the seed/mailbox to
 .. code-block:: python
 
 	seed := &models.Seed{
-		Email:        "test1@hotmail.com"
+		Email:        "test1@hotmail.com",
 		Password:     "test",
 		RecoveryCode: "",
 		LocalEmail:   "", // Recovery Email
