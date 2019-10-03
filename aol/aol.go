@@ -18,7 +18,6 @@ import (
 
 const AOL_START_PAGE = "https://mail.aol.com"
 
-// VERIFY_SIGNED_IN_TIMEOUT timeout in secunde pentru cat timp asteptam dupa element vizibil care ne zice daca suntem logati in aol
 const VERIFY_SIGNED_IN_TIMEOUT = 10
 
 type Runner struct {
