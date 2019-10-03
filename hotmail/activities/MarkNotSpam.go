@@ -17,7 +17,7 @@ func NewMarkNotSpam(tasksContext context.Context, weight int) activity.Activity 
 	a := MarkNotSpam{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -35,27 +35,28 @@ func (self *MarkNotSpam) init() {
 func (self *MarkNotSpam) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//*[@title="Junk Email"]/span/span/text()')[0].data`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] MarkNotSpam() not available: %s", err.Error())
 		return false
 	}
-
+	fmt.Println("[INFO] MarkNotSpam() is available")
 	return true
 }
 
 func (self *MarkNotSpam) Run() {
-	fmt.Println("[INFO] mark not spam")
+	fmt.Println("[DEBUG] MarkNotSpam() running")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click Junk Email button
 		chromedp.Click(`//*[@title="Junk Email"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
 	// selector for unread mesages
 	selectorXPath := `//*[contains(@aria-label, "Unread")][1]`
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Open message
 		// Set as read with ctrl+q
 		chromedp.Click(selectorXPath, chromedp.NodeVisible), self.RandomSleep(),
@@ -65,5 +66,5 @@ func (self *MarkNotSpam) Run() {
 		chromedp.Click(`//*[contains(@name, "Not junk")][contains(@class, "ms-ContextualMenu-link")]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] MarkNotSpam() done")
 }

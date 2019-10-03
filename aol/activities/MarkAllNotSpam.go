@@ -17,7 +17,7 @@ func NewMarkAllNotSpam(tasksContext context.Context, weight int) activity.Activi
 	a := MarkAllNotSpam{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -35,37 +35,36 @@ func (self *MarkAllNotSpam) init() {
 func (self *MarkAllNotSpam) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
-		chromedp.EvaluateAsDevTools(`$x('((//a[@data-test-folder-name="Bulk"])[1]/span)[2]/span/text()')[0].data`, &value),
+	err := chromedp.Run(self.Context,
+		chromedp.EvaluateAsDevTools(`$x('//*[@thefn="Spam"]/following-sibling::div/div[@class="unseen"]')[0].innerText`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] MarkAllNotSpam() not available: %s", err.Error())
 		return false
 	}
-
-	return true
+	intValue, _ := strconv.Atoi(value)
+	if intValue > 0 {
+		fmt.Println("[INFO] MarkAllNotSpam() available")
+		return true
+	}
+	fmt.Println("[WARN] MarkAllNotSpam() not available")
+	return false
 }
 
 func (self *MarkAllNotSpam) Run() {
-	fmt.Println("[INFO] mark all not spam...")
-
-	chromedp.Run(self.Tasks,
-		// Click Junk Email button
-		chromedp.Click(`//a[@data-test-folder-name="Bulk"]`, chromedp.NodeVisible),
+	fmt.Println("[INFO] MarkAllNotSpam() running")
+	chromedp.Run(self.Context,
+		// Click Spam button
+		chromedp.Click(`//*[@thefn="Spam"]/following-sibling::div/span`, chromedp.NodeVisible),
+		self.RandomSleep(),
+	)
+	chromedp.Run(self.Context,
+		// Select all messages
+		chromedp.Click(`//div[@dojoattachpoint="headerContentNode"]/table/tbody/tr/th[contains(@class,"dojoxGrid-cell")][1]`, chromedp.NodeVisible),
 		self.RandomSleep(),
 	)
 
-	chromedp.Run(self.Tasks,
+	self.SetMailActionByName("Inbox", "Spam")
 
-		//Click Junk Email
-		chromedp.Click(`//div[@title="Junk Email"][1]`, chromedp.NodeVisible), self.RandomSleep(),
-
-		// Select all messages
-		chromedp.Click(`//div[@aria-label="Select all messages"]/descendant::i[@data-icon-name="StatusCircleCheckmark"][1]`, chromedp.NodeVisible), self.RandomSleep(),
-
-		// Click Not Junk
-		chromedp.Click(`//i[@data-icon-name="ChevronDown"]/ancestor::button[@name="Not junk"][1]`, chromedp.NodeVisible), self.RandomSleep(),
-		chromedp.Click(`//span[.="Not junk"]/ancestor::button[@name="Not junk"][1]`, chromedp.NodeVisible), self.RandomSleep(),
-	)
-
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] MarkAllNotSpam() done")
 }

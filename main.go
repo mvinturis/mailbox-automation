@@ -47,15 +47,17 @@ func main() {
 		i++
 		tokens := strings.Split(line, ":")
 
-		job := &models.Seed{
+		seed := &models.Seed{
 			Email:        tokens[0],
 			Password:     tokens[1],
-			RecoveryCode: "",
-			LocalEmail:   "",
-			ProxyIp:      "",
+			Phone:        tokens[2],
+			AuthKey:      tokens[4],
+			RecoveryCode: tokens[6],
+			LocalEmail:   tokens[7],
+			ProxyIp:      tokens[8],
 		}
 
-		work <- job
+		work <- seed
 		time.Sleep(time.Duration(6) * time.Second)
 	}
 
@@ -92,8 +94,14 @@ func readLines(path string) (lines []string, err error) {
 }
 
 func startActivities(seed *models.Seed) {
+	var err error
+	seed.ProfilePath, err = chromeuser.SetProfile(seed)
+	if err != nil {
+		fmt.Println("[ERROR] chromeuser.SetProfile(): %s", err.Error())
+		return
+	}
 
-	seed.ProfilePath = chromeuser.SetProfile(seed)
+	fmt.Println("[INFO] ProxyIp: " + seed.ProxyIp)
 
 	// remove Headless option
 	opts := append(chromedp.DefaultExecAllocatorOptions[3:],
@@ -102,7 +110,9 @@ func startActivities(seed *models.Seed) {
 		chromedp.UserDataDir(seed.ProfilePath),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-web-security", "1"),
+		chromedp.Flag("disable-extensions", false),
 	)
+
 	if seed.ProxyIp != "" {
 		opts = append(opts,
 			chromedp.Flag("proxy-server", "socks5://"+seed.ProxyIp+":1080"),

@@ -17,7 +17,7 @@ func NewMarkAllNotSpam(tasksContext context.Context, weight int) activity.Activi
 	a := MarkAllNotSpam{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -35,26 +35,27 @@ func (self *MarkAllNotSpam) init() {
 func (self *MarkAllNotSpam) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('((//div[@title="Junk Email"])[1]/span)[2]/span/text()')[0].data`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] MarkAllNotSpam() not available: %s", err.Error())
 		return false
 	}
-
+	fmt.Println("[INFO] MarkAllNotSpam() available")
 	return true
 }
 
 func (self *MarkAllNotSpam) Run() {
-	fmt.Println("[INFO] mark all not spam...")
+	fmt.Println("[DEBUG] MarkAllNotSpam() running")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click Junk Email button
 		chromedp.Click(`//*[@title="Junk Email"]`, chromedp.NodeVisible),
 		self.RandomSleep(),
 	)
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 
 		//Click Junk Email
 		chromedp.Click(`//div[@title="Junk Email"][1]`, chromedp.NodeVisible), self.RandomSleep(),
@@ -67,5 +68,5 @@ func (self *MarkAllNotSpam) Run() {
 		chromedp.Click(`//span[.="Not junk"]/ancestor::button[@name="Not junk"][1]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] MarkAllNotSpam() done")
 }

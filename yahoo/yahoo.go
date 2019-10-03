@@ -28,7 +28,7 @@ type Runner struct {
 func NewRunner(seed *models.Seed, tasksContext context.Context) runner.Runner {
 	r := Runner{
 		runner.Runner{
-			Profile: seed, Tasks: tasksContext,
+			Profile: seed, Context: tasksContext,
 		},
 		nil,
 	}
@@ -63,6 +63,7 @@ func (self *Runner) Start(behaviour string, params *models.TaskParams) {
 func (self *Runner) Login() bool {
 	self.navigateToYahoo()
 	if self.IsSignedIn() {
+		fmt.Println("[DEBUG] already signed in")
 		return true
 	}
 
@@ -78,7 +79,7 @@ func (self *Runner) Login() bool {
 			return true
 		}
 		retryIndex++
-		chromedp.Run(self.Tasks,
+		chromedp.Run(self.Context,
 			self.RandomSleep(),
 		)
 	}
@@ -89,13 +90,14 @@ func (self *Runner) Login() bool {
 // IsSignedIn verifica daca suntem autentificati in casuta de yahoo dupa elementul #searchBoxId
 // asteptam 10 secunde sa vedem daca e vizibil, daca nu -> timeout
 func (self *Runner) IsSignedIn() bool {
+	fmt.Println("[DEBUG] IsSignedIn(): start")	
 	var value string
 
 	timeout := time.After(time.Second * VERIFY_SIGNED_IN_TIMEOUT)
 	result := make(chan error)
 
 	go func() {
-		err := chromedp.Run(self.Tasks,
+		err := chromedp.Run(self.Context,
 			chromedp.EvaluateAsDevTools(`$x('//div[@id="mail-search"]')[0].innerText`, &value),
 			// chromedp.WaitVisible("#mail-search"),
 		)
@@ -106,6 +108,7 @@ func (self *Runner) IsSignedIn() bool {
 	select {
 	case res := <-result:
 		if res == nil {
+			fmt.Println("[INFO] IsSignedIn(): success, we're logged in")
 			return true
 		}
 		fmt.Println("[ERROR] error while waiting signed-in verification: %s\n", res.Error())
@@ -118,21 +121,20 @@ func (self *Runner) IsSignedIn() bool {
 }
 
 func (self *Runner) Logout() {
-	fmt.Println("[INFO] logout... ")
+	fmt.Println("[DEBUG] logging out")
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//input[@id="ybarAccountMenu"]')[0].value`, &value),
 		chromedp.Click(`//input[@id="ybarAccountMenu"]`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.EvaluateAsDevTools(`$x('//a[contains(@data-ylk, "sign out")]')[0].href`, &value),
 		chromedp.Click(`//a[contains(@data-ylk, "sign out")]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 	if err != nil {
-		fmt.Println("[INFO] false")
-		return
+		fmt.Println("[ERROR] Logout() failed: %s", err.Error())
+	} else {
+		fmt.Println("[INFO] logged out")
 	}
-
-	fmt.Println("[INFO] true")
 }
 
 func (self *Runner) GetAvailableActivities() []activity.Activity {
@@ -148,9 +150,9 @@ func (self *Runner) GetAvailableActivities() []activity.Activity {
 }
 
 func (self *Runner) navigateToYahoo() error {
-	fmt.Println("[INFO] navigating to yahoo...")
+	fmt.Println("[DEBUG] navigating to yahoo start page")
 
-	return chromedp.Run(self.Tasks, chromedp.Navigate(YAHOO_START_PAGE))
+	return chromedp.Run(self.Context, chromedp.Navigate(YAHOO_START_PAGE))
 }
 
 func (self *Runner) verifyLoginMode() bool {
@@ -158,15 +160,15 @@ func (self *Runner) verifyLoginMode() bool {
 
 	fmt.Println("[INFO] verify login mode... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//input[@id="login-username"]')[0].value`, &title),
 	)
 	if err != nil {
-		fmt.Println("[INFO] false")
+		fmt.Println("[ERROR] verifyLoginMode(): %s", err.Error())
 		return false
 	}
 
-	fmt.Println("[INFO] true")
+	fmt.Println("[INFO] verifyLoginMode(): success")
 
 	return true
 }
@@ -175,7 +177,7 @@ func (self *Runner) mailboxLogin() error {
 
 	fmt.Println("[INFO] login... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.DoubleClick(`#login-username`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.KeyEvent("\b", chromedp.KeyModifiers(input.ModifierNone)), self.RandomSleep(),
 		chromedp.SendKeys(`#login-username`, self.Profile.Email+"\n"), self.RandomSleep(),
@@ -197,14 +199,13 @@ func (self *Runner) InitActivities(params *models.TaskParams) {
 
 	// set weights for activities
 	self.Activities = []activity.Activity{
-		// activities.NewMarkAllNotSpam(self.Tasks, 100),
-		activities.NewOpenMessages(self.Tasks, 5, searchKeyword),
-		// activities.NewClickOffer(self.Tasks, 10),
-		activities.NewMarkAsRead(self.Tasks, 100),
-		activities.NewMarkAsUnread(self.Tasks, 1),
-		// activities.NewMoveAllNonCampaignToArchive(self.Tasks, 10000, searchKeyword),
-		activities.NewStarMessages(self.Tasks, 100),
-		activities.NewMoveToArchive(self.Tasks, 20),
+		// activities.NewMarkAllNotSpam(self.Context, 100),
+		activities.NewOpenMessages(self.Context, 5, searchKeyword),
+		// activities.NewClickOffer(self.Context, 10),
+		activities.NewMarkAsRead(self.Context, 100),
+		activities.NewMarkAsUnread(self.Context, 1),
+		activities.NewStarMessages(self.Context, 100),
+		activities.NewMoveToArchive(self.Context, 20),
 	}
 }
 
@@ -216,7 +217,7 @@ func (self *Runner) ChangeLanguageEnglish() {
 	titleLanguage := "english - united states"
 
 	for _, expectedTitle := range elements {
-		err := chromedp.Run(self.Tasks,
+		err := chromedp.Run(self.Context,
 			chromedp.EvaluateAsDevTools(`$x('//span[@data-test-folder-name="`+expectedTitle+`"]')[0].innerText`, &title),
 		)
 		if err != nil {
@@ -235,11 +236,11 @@ func (self *Runner) ChangeLanguageEnglish() {
 	fmt.Println("[INFO] change language to English - United States")
 
 	// Get the first new tab that isn't blank.
-	ch := chromedp.WaitNewTarget(self.Tasks, func(info *target.Info) bool {
+	ch := chromedp.WaitNewTarget(self.Context, func(info *target.Info) bool {
 		return info.URL != ""
 	})
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//input[@id="ybarAccountMenu"]')[0].value`, &value),
 		chromedp.Click(`//input[@id="ybarAccountMenu"]`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.EvaluateAsDevTools(`$x('//a[contains(@data-ylk, "Account Info")]')[0].href`, &value),
@@ -249,7 +250,7 @@ func (self *Runner) ChangeLanguageEnglish() {
 		return
 	}
 
-	newTab, cancel := chromedp.NewContext(self.Tasks, chromedp.WithTargetID(<-ch))
+	newTab, cancel := chromedp.NewContext(self.Context, chromedp.WithTargetID(<-ch))
 
 	chromedp.Run(newTab,
 		chromedp.EvaluateAsDevTools(`$x('//li[contains(@class,"li-preferences")]')[0].innerText`, &value),
@@ -268,7 +269,7 @@ func (self *Runner) ChangeLanguageEnglish() {
 	cancel()
 
 	// Wait for Language change to take effect
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		self.RandomSleep(), self.RandomSleep(),
 	)
 

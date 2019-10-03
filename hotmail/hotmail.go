@@ -27,7 +27,7 @@ type Runner struct {
 func NewRunner(seed *models.Seed, tasksContext context.Context) runner.Runner {
 	r := Runner{
 		runner.Runner{
-			Profile: seed, Tasks: tasksContext,
+			Profile: seed, Context: tasksContext,
 		},
 		nil,
 	}
@@ -55,6 +55,10 @@ func (self *Runner) Start(behaviour string, params *models.TaskParams) {
 		self.ReadMessages(params)
 	case "recoverAccount":
 		// Do nothing more, since Login is already done
+		if self.IsSignedIn() {
+			fmt.Println("[INFO] recoverAccount finished")
+			time.Sleep(time.Duration(3) * time.Second)
+		}
 	case "logout":
 		self.Logout()
 	}
@@ -63,6 +67,7 @@ func (self *Runner) Start(behaviour string, params *models.TaskParams) {
 func (self *Runner) Login() bool {
 	self.navigateToHotmail()
 	if self.IsSignedIn() {
+		fmt.Println("[DEBUG] already signed in")
 		return true
 	}
 
@@ -95,7 +100,7 @@ func (self *Runner) Login() bool {
 			return true
 		}
 		retryIndex++
-		chromedp.Run(self.Tasks,
+		chromedp.Run(self.Context,
 			self.RandomSleep(),
 		)
 	}
@@ -106,12 +111,12 @@ func (self *Runner) Login() bool {
 // IsSignedIn verifica daca suntem autentificati in casuta de hotmail dupa elementul #searchBoxId
 // asteptam 10 secunde sa vedem daca e vizibil, daca nu -> timeout
 func (self *Runner) IsSignedIn() bool {
-
+	fmt.Println("[DEBUG] IsSignedIn(): start")
 	timeout := time.After(time.Second * VERIFY_SIGNED_IN_TIMEOUT)
 	result := make(chan error)
 
 	go func() {
-		err := chromedp.Run(self.Tasks,
+		err := chromedp.Run(self.Context,
 			chromedp.WaitVisible("#searchBoxId"),
 		)
 
@@ -133,30 +138,33 @@ func (self *Runner) IsSignedIn() bool {
 }
 
 func (self *Runner) Logout() {
-	fmt.Println("[INFO] logout... ")
-	var value string
+	fmt.Println("[DEBUG] logging out")
 
-	err := chromedp.Run(self.Tasks,
+	var value string
+	time.Sleep(2 * time.Second)
+
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//*[@id=O365_MainLink_MePhoto"]/div/div/div/div[2]/img')[0].src`, &value),
 		chromedp.Click(`//*[@id="O365_MainLink_MePhoto"]/div/div/div/div[2]/img`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.EvaluateAsDevTools(`$x('//#meControlSignoutLink')[0].innerText`, &value),
 		chromedp.Click(`#meControlSignoutLink`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 	if err != nil {
+		fmt.Println("[WARN] Logout(): first logout failed, attempting second try")
 		// Try another logout method
-		err = chromedp.Run(self.Tasks,
+		err = chromedp.Run(self.Context,
 			chromedp.EvaluateAsDevTools(`$x('//*[contains(@class, "ms-Persona-initials")]/ancestor::button')[0].value`, &value),
 			chromedp.Click(`//*[contains(@class, "ms-Persona-initials")]/ancestor::button`, chromedp.NodeVisible), self.RandomSleep(),
 			chromedp.EvaluateAsDevTools(`$x('//*[.="Sign out"]/ancestor::button')[0].value`, &value),
 			chromedp.Click(`//*[.="Sign out"]/ancestor::button`, chromedp.NodeVisible), self.RandomSleep(),
 		)
 		if err != nil {
-			fmt.Println("[INFO] false")
+			fmt.Println("[ERROR] Logout() failed: %s", err.Error())
 			return
 		}
 	}
 
-	fmt.Println("[INFO] true")
+	fmt.Println("[INFO] logged out")
 }
 
 func (self *Runner) GetAvailableActivities() []activity.Activity {
@@ -174,7 +182,7 @@ func (self *Runner) GetAvailableActivities() []activity.Activity {
 func (self *Runner) navigateToHotmail() error {
 	fmt.Println("[INFO] navigating to hotmail...")
 
-	return chromedp.Run(self.Tasks, chromedp.Navigate(HOTMAIL_START_PAGE))
+	return chromedp.Run(self.Context, chromedp.Navigate(HOTMAIL_START_PAGE))
 }
 
 func (self *Runner) startSignIn() error {
@@ -182,13 +190,13 @@ func (self *Runner) startSignIn() error {
 
 	fmt.Println("[INFO] start sign in... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//a[@class="linkButtonSigninHeader"]')[0].href`, &title),
 		chromedp.Click(`//a[@class="linkButtonSigninHeader"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
 	if err != nil {
-		err = chromedp.Run(self.Tasks,
+		err = chromedp.Run(self.Context,
 			chromedp.EvaluateAsDevTools(`$x('//a[contains(@data-m, "SIGNIN")]')[0].click()`, &title),
 			// chromedp.Click(`//a[contains(@data-m, "SIGNIN")][1]`, chromedp.NodeVisible), self.RandomSleep(),
 		)
@@ -208,7 +216,7 @@ func (self *Runner) verifyLoginMode() bool {
 
 	fmt.Println("[INFO] verify login mode... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools("document.getElementById('i0116').innerHTML", &title),
 		chromedp.EvaluateAsDevTools("document.getElementById('i0118').innerHTML", &title),
 	)
@@ -226,7 +234,7 @@ func (self *Runner) mailboxLogin() error {
 
 	fmt.Println("[INFO] login... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.WaitVisible(`#i0116`, chromedp.ByID),
 		chromedp.SendKeys(`#i0116`, self.Profile.Email+"\n"), self.RandomSleep(),
 		chromedp.WaitVisible(`#i0118`, chromedp.ByID),
@@ -247,16 +255,16 @@ func (self *Runner) verifyMailboxRecoveryMode() bool {
 
 	fmt.Println("[INFO] verify mailbox recovery mode... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools("document.getElementById('idDiv_SAOTCC_Title').innerHTML", &title),
 	)
 	if err != nil {
-		fmt.Println("[INFO] false")
+		fmt.Println("[ERROR] verifyMailboxRecoveryMode(): %s", err.Error())
 		return false
 	}
 
 	if title == "Enter code" {
-		fmt.Println("[INFO] true")
+		fmt.Println("[INFO] mailbox in 'Recovery' mode")
 		return true
 	}
 
@@ -268,8 +276,7 @@ func (self *Runner) verifyMailboxRecoveryMode() bool {
 func (self *Runner) executeMailboxRecovery() error {
 	fmt.Println("[INFO] execute mailbox recovery... ")
 	var new_recovery_code string
-
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		self.RandomSleep(),
 		chromedp.Click(`#signInAnotherWay`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.Click(`#idA_SAOTCS_LostProofs`, chromedp.NodeVisible), self.RandomSleep(),
@@ -284,9 +291,12 @@ func (self *Runner) executeMailboxRecovery() error {
 		return err
 	}
 
+	// get security code from local received email
 	securityCode := self.getMailboxSecurityCode(self.Profile.LocalEmail)
+	fmt.Println("[INFO] executeMailboxRecovery() received security code: %s", securityCode)
 
-	err = chromedp.Run(self.Tasks,
+	// input and send recovery code
+	err = chromedp.Run(self.Context,
 		chromedp.WaitVisible(`#iOttText`, chromedp.ByID),
 		chromedp.SendKeys(`#iOttText`, securityCode+"\n"), self.RandomSleep(),
 		chromedp.WaitVisible(`#iRecoveryCodeVal`, chromedp.ByID),
@@ -311,26 +321,6 @@ func (self *Runner) getMailboxSecurityCode(mailbox string) string {
 	fmt.Println("[INFO] getMailboxSecurityCode... ")
 
 	securityCode := ""
-	// for securityCode == "" {
-	// 	msg, err := mailbox_api.FindHotmailSecurityCodeForEmail(mailbox)
-	// 	if err != nil {
-	// 		fmt.Println("[ERROR] %s", err.Error())
-	// 		time.Sleep(1 * time.Second)
-	// 		continue
-	// 	}
-	// 	fmt.Println("[INFO] parsed email message:\n%+v\n\n", msg)
-
-	// 	err = mailbox_api.RemoveOne(msg.ID.Hex())
-	// 	if err != nil {
-	// 		fmt.Println("[ERROR] %s", err.Error())
-	// 	}
-
-	// 	securityCode = msg.Details.(interface{}).(map[string]interface{})["code"].(string)
-	// 	if securityCode == "" {
-	// 		time.Sleep(1 * time.Second)
-	// 		continue
-	// 	}
-	// }
 
 	fmt.Println("[INFO] done")
 
@@ -339,24 +329,21 @@ func (self *Runner) getMailboxSecurityCode(mailbox string) string {
 
 func (self *Runner) verifyMailboxUnlockMode() bool {
 	var title, description string
-
-	fmt.Println("[INFO] verify mailbox unlock mode... ")
-
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools("document.getElementById('StartHeader').innerHTML", &title),
 		chromedp.EvaluateAsDevTools("document.getElementById('StartQ2').innerHTML", &description),
 	)
 	if err != nil {
-		fmt.Println("[INFO] false")
+		fmt.Println("[DEBUG] mailbox not in 'Unlock' mode")
 		return false
 	}
 
 	if title == "Your account has been locked" && description == "Unlocking your account" {
-		fmt.Println("[INFO] true")
+		fmt.Println("[WARN] mailbox is in 'Unlock' mode")
 		return true
 	}
 
-	fmt.Println("[INFO] false")
+	fmt.Println("[ERROR] verifyMailboxUnlockMode(): title and description differ (title='%s', description='%s')", title, description)
 
 	return false
 }
@@ -365,27 +352,27 @@ func (self *Runner) executeMailboxUnlock() error {
 	fmt.Println("[INFO] execute mailbox unlock... ")
 
 	var value string
-
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		self.RandomSleep(),
 		chromedp.Click(`#StartAction`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.WaitVisible(`#idPhonePageTitle`, chromedp.ByID),
 		chromedp.WaitVisible(`#wlspispHipChallengeContainer`, chromedp.ByID),
 	)
 	if err != nil {
-		fmt.Println("[ERROR] %s", err.Error())
+		fmt.Println("[ERROR] executeMailboxUnlock() start: %s", err.Error())
 		return err
 	}
 
 	for countryCode := range smspva.IsoCountryCodes {
-
-		var phoneNumber, phoneID string
-		for phoneNumber, phoneID = smspva.GetPhoneNumber(countryCode); phoneNumber == ""; phoneNumber, phoneID = smspva.GetPhoneNumber(countryCode) {
-			fmt.Println("[INFO] retry GetPhoneNumber...")
+		var phoneNumber, phoneID, countryPrefix string
+		for phoneNumber, phoneID, countryPrefix = smspva.GetPhoneNumber(smspva.SERVICEIDHOTMAIL, countryCode); phoneNumber == ""; phoneNumber, phoneID, countryPrefix = smspva.GetPhoneNumber(smspva.SERVICEIDHOTMAIL, countryCode) {
+			fmt.Println("[DEBUG] executeMailboxUnlock(): retrying smspva.GetPhoneNumber() in 10 seconds")
 			time.Sleep(time.Second * 10)
 		}
 
-		err = chromedp.Run(self.Tasks,
+		self.Profile.Phone = countryPrefix + " " + phoneNumber
+
+		err = chromedp.Run(self.Context,
 			// Erase existing phoneNumber
 			chromedp.DoubleClick(`#wlspispHipChallengeContainer > div:nth-child(2) > input[type=text]:nth-child(2)`, chromedp.NodeVisible), self.RandomSleep(),
 			chromedp.KeyEvent("\b", chromedp.KeyModifiers(0)), self.RandomSleep(),
@@ -397,19 +384,20 @@ func (self *Runner) executeMailboxUnlock() error {
 			chromedp.Click(`//a[@title="Send SMS code"]`, chromedp.NodeVisible), self.RandomSleep(),
 		)
 		if err != nil {
-			fmt.Println("[ERROR] %s", err.Error())
-			continue
-		}
-		// Check if the phoneNumber was accepted
-		err = chromedp.Run(self.Tasks,
-			chromedp.EvaluateAsDevTools(`$x('//div[@class="alert alert-error"][contains(@style, "display: inline")]')[0].innerText`, &value),
-		)
-		if err == nil {
-			fmt.Println("[ERROR] %s", value)
+			fmt.Println("[ERROR] executeMailboxUnlock() send code: %s", err.Error())
 			continue
 		}
 
-		err = chromedp.Run(self.Tasks,
+		// Check if the phoneNumber was accepted
+		err = chromedp.Run(self.Context,
+			chromedp.EvaluateAsDevTools(`$x('//div[@class="alert alert-error"][contains(@style, "display: inline")]')[0].innerText`, &value),
+		)
+		if err == nil {
+			fmt.Println("[ERROR] executeMailboxUnlock() phone number not accepted: %s", err.Error())
+			continue
+		}
+
+		err = chromedp.Run(self.Context,
 			chromedp.WaitVisible(`#wlspispHipSolutionContainer`, chromedp.ByID),
 		)
 		if err != nil {
@@ -418,12 +406,12 @@ func (self *Runner) executeMailboxUnlock() error {
 		}
 
 		var sms string
-		for sms = smspva.GetSms(countryCode, phoneID); sms == ""; sms = smspva.GetSms(countryCode, phoneID) {
-			fmt.Println("[INFO] retry GetSms...")
+		for sms = smspva.GetSms(smspva.SERVICEIDHOTMAIL, countryCode, phoneID); sms == ""; sms = smspva.GetSms(smspva.SERVICEIDHOTMAIL, countryCode, phoneID) {
+			fmt.Println("[DEBUG] executeMailboxUnlock(): retrying smspva.GetSms() in 10 seconds")
 			time.Sleep(time.Second * 10)
 		}
 
-		err = chromedp.Run(self.Tasks,
+		err = chromedp.Run(self.Context,
 			chromedp.SendKeys(`#wlspispHipSolutionContainer > div > input`, sms), self.RandomSleep(),
 			chromedp.Click(`#ProofAction`, chromedp.NodeVisible), self.RandomSleep(),
 			chromedp.Click(`#FinishAction`, chromedp.NodeVisible), self.RandomSleep(),
@@ -432,15 +420,17 @@ func (self *Runner) executeMailboxUnlock() error {
 			fmt.Println("[ERROR] %s", err.Error())
 			continue
 		}
+
 		// All good
 		break
 	}
 
 	if err != nil {
+		fmt.Println("[ERROR] executeMailboxUnlock() failed: %s", err.Error())
 		return err
 	}
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[ERROR] executeMailboxUnlock() success")
 
 	return nil
 }
@@ -450,28 +440,26 @@ func (self *Runner) verifyIdentityMode() bool {
 
 	fmt.Println("[INFO] verify identity mode... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools("document.getElementById('idDiv_SAOTCS_Title').innerHTML", &title),
 	)
 	if err != nil {
-		fmt.Println("[INFO] false")
+		fmt.Println("[ERROR] verifyIdentityMode(): %s", err.Error())
 		return false
 	}
 
 	if title == "Verify your identity" {
-		fmt.Println("[INFO] true")
+		fmt.Println("[INFO] mailbox in 'Verify your identity' mode")
 		return true
 	}
 
-	fmt.Println("[INFO] false")
+	fmt.Println("[ERROR] verifyIdentityMode() title differs: '%s'", title)
 
 	return false
 }
 
 func (self *Runner) executeVerifyIdentity() error {
-	fmt.Println("[INFO] execute verify identity... ")
-
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		self.RandomSleep(),
 		chromedp.Click(`#idDiv_SAOTCS_Proofs > div > div > div`, chromedp.NodeVisible), self.RandomSleep(),
 		chromedp.WaitVisible(`#idTxtBx_SAOTCS_ProofConfirmation`, chromedp.ByID),
@@ -479,15 +467,16 @@ func (self *Runner) executeVerifyIdentity() error {
 		chromedp.Click(`#idSubmit_SAOTCS_SendCode`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 	if err != nil {
-		fmt.Println("[ERROR] %s", err.Error())
+		fmt.Println("[ERROR] executeVerifyIdentity() SendCode: %s", err.Error())
 		return err
 	}
 
+	// get security code from local received email
 	securityCode := self.getMailboxSecurityCode(self.Profile.LocalEmail)
+	fmt.Println("[INFO] executeVerifyIdentity() received security code: %s", securityCode)
 
-	fmt.Println("[INFO] Please check DOM selector elements... ")
-
-	err = chromedp.Run(self.Tasks,
+	// input security code
+	err = chromedp.Run(self.Context,
 		chromedp.WaitVisible(`#idTxtBx_SAOTCC_OTC`, chromedp.ByID),
 		chromedp.SendKeys(`#idTxtBx_SAOTCC_OTC`, securityCode), self.RandomSleep(),
 		chromedp.WaitVisible(`#idSubmit_SAOTCC_Continue`, chromedp.ByID),
@@ -498,8 +487,6 @@ func (self *Runner) executeVerifyIdentity() error {
 		return err
 	}
 
-	fmt.Println("[INFO] done")
-
 	return nil
 }
 
@@ -508,7 +495,7 @@ func (self *Runner) verifyProtectAccountMode() bool {
 
 	fmt.Println("[INFO] verify protect account mode... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools("document.getElementById('iSelectProofTitle').innerHTML", &title),
 	)
 	if err != nil {
@@ -517,7 +504,7 @@ func (self *Runner) verifyProtectAccountMode() bool {
 	}
 
 	if title == "Help us protect your account" {
-		fmt.Println("[INFO] true")
+		fmt.Println("[INFO] mailbox in 'Protect your account' mode")
 		return true
 	}
 
@@ -529,7 +516,7 @@ func (self *Runner) verifyProtectAccountMode() bool {
 func (self *Runner) executeProtectAccount() error {
 	fmt.Println("[INFO] execute protect account... ")
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		self.RandomSleep(),
 		chromedp.WaitVisible(`#iProofLbl0`, chromedp.ByID),
 		chromedp.Click(`#iProofLbl0`, chromedp.NodeVisible), self.RandomSleep(),
@@ -542,8 +529,10 @@ func (self *Runner) executeProtectAccount() error {
 	}
 
 	securityCode := self.getMailboxSecurityCode(self.Profile.LocalEmail)
+	fmt.Println("[INFO] executeProtectAccount() received security code: %s", securityCode)
 
-	err = chromedp.Run(self.Tasks,
+	// input security code
+	err = chromedp.Run(self.Context,
 		chromedp.WaitVisible(`#iOttText`, chromedp.ByID),
 		chromedp.SendKeys(`#iOttText`, securityCode+"\n"), self.RandomSleep(),
 	)
@@ -562,41 +551,15 @@ func (self *Runner) InitActivities(params *models.TaskParams) {
 
 	// set weights for activities
 	self.Activities = []activity.Activity{
-		activities.NewMarkNotSpam(self.Tasks, 1),
-		activities.NewMarkAllNotSpam(self.Tasks, 100),
-		activities.NewOpenMessages(self.Tasks, 5, searchKeyword),
-		activities.NewClickOffer(self.Tasks, 10),
-		activities.NewMarkAsRead(self.Tasks, 100),
-		activities.NewMarkAsUnread(self.Tasks, 1),
-		activities.NewMoveAllNonCampaignToArchive(self.Tasks, 10000, searchKeyword),
-		activities.NewCategorize(self.Tasks, 100),
-		activities.NewPinMessages(self.Tasks, 100),
-		activities.NewFlagMessages(self.Tasks, 100),
-		activities.NewMoveToArchive(self.Tasks, 20),
+		activities.NewMarkNotSpam(self.Context, 10),
+		activities.NewMarkAllNotSpam(self.Context, 100),
+		activities.NewOpenMessages(self.Context, 5, searchKeyword),
+		activities.NewClickOffer(self.Context, 10),
+		activities.NewMarkAsRead(self.Context, 100),
+		activities.NewMoveAllNonCampaignToArchive(self.Context, 10000, searchKeyword),
+		activities.NewCategorize(self.Context, 100),
+		activities.NewPinMessages(self.Context, 100),
+		activities.NewFlagMessages(self.Context, 100),
+		activities.NewMoveToArchive(self.Context, 20),
 	}
 }
-
-// pentru a redeclara ReadMessages() intr-o forma specifica runnerului de hotmail
-//func (self *Runner) ReadMessages(params *models.TaskParams) {
-//
-//	fmt.Println("[INFO] hotmail read messages... ")
-//
-//	self.Activities = []activity.Activity{
-//		activities.NewOpenMessages(self.Tasks, 10, params.Keyword),
-//	}
-//
-//	if !self.IsSignedIn() {
-//		self.Login()
-//	}
-//
-//	activities := self.GetAvailableActivities()
-//	if len(activities) <= 0 {
-//		fmt.Println("[INFO] finished... no more activities")
-//	}
-//
-//	for _, activity := range activities {
-//		activity.Run()
-//	}
-//
-//	fmt.Println("[INFO] read messages done")
-//}

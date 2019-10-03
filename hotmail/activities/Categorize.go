@@ -19,7 +19,7 @@ func NewCategorize(tasksContext context.Context, weight int) activity.Activity {
 	a := Categorize{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -37,10 +37,11 @@ func (self *Categorize) init() {
 func (self *Categorize) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('(//*[contains(@aria-label, "Opens Profile Card")])//text()')[0].data`, &value),
 	)
 	if err != nil {
+		fmt.Println("[ERROR] Categorize() not available: %s", err.Error())
 		return false
 	}
 
@@ -54,12 +55,13 @@ func (self *Categorize) IsAvailable() bool {
 		"or contains(@title, 'Red')" +
 		")])`)[0].title"
 
-	err = chromedp.Run(self.Tasks,
+	err = chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(categorySelector, &value),
 	)
 	if err != nil {
 		// No categories were found
 		// Activity is available
+		fmt.Println("[INFO] Categorize() is available")
 		return true
 	}
 
@@ -70,9 +72,7 @@ func (self *Categorize) IsAvailable() bool {
 }
 
 func (self *Categorize) Run() {
-	fmt.Println("[INFO] Categorize Mail Randomly")
-
-	// Get random Category for email
+	fmt.Println("[INFO] Categorize(): running")
 
 	rand.Seed(time.Now().Unix())
 
@@ -90,7 +90,7 @@ func (self *Categorize) Run() {
 	category := categorySelectors[n]
 	fmt.Println("[INFO] Will categorize email as %s", category)
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click Categorize
 		chromedp.Click(`//*[@name="Categorize"]`, chromedp.NodeVisible),
 		self.RandomSleep(),
@@ -100,5 +100,5 @@ func (self *Categorize) Run() {
 		self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] Categorize(): done")
 }

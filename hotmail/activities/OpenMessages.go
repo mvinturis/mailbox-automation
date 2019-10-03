@@ -21,7 +21,7 @@ func NewOpenMessages(tasksContext context.Context, weight int, searchKeyword str
 	a := OpenMessages{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 		searchKeyword,
@@ -40,32 +40,37 @@ func (self *OpenMessages) init() {
 func (self *OpenMessages) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('((//div[@title="Inbox"])[1]/span)[2]/span/text()')[0].data`, &value),
 	)
 	if err != nil {
-		fmt.Println("[WARN] activity 'OpenMessages' not available: %s", err.Error())
+		fmt.Println("[WARN] OpenMessages() is not available: %s", err.Error())
 		return false
 	}
 
+	self.ActivityBase.SetSearchKeyword(self.SearchKeyword, "Inbox")
+	chromedp.Run(self.Context,
+		chromedp.EvaluateAsDevTools(`$x('//*[text()="We didn\'t find anything"]/text()')[0].data`, &value),
+	)
+	if value == `We didn't find anything` {
+		fmt.Println("[WARN] OpenMessages() is not available: we didn't find anything")
+		return false
+	}
+	fmt.Println("[INFO] OpenMessages() is available")
 	return true
 }
 
 func (self *OpenMessages) Run() {
-	fmt.Println("[INFO] open message... ")
+	fmt.Println("[DEBUG] OpenMessages() running")
 
-	self.ActivityBase.SetSearchKeyword(self.SearchKeyword, "Inbox")
-
-	// xpath to search for the first unread message
-	// selectorXPath := `//div[@data-convid!=""][starts-with(@aria-label,"Unread")][1]`
 	selectorXPath := `//div[@data-convid!=""][1]`
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Open message
 		chromedp.Click(selectorXPath, chromedp.NodeVisible), self.RandomSleep(),
 		// Set as read with ctrl+q
 		chromedp.KeyEvent("q", chromedp.KeyModifiers(2)), self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] OpenMessages() done")
 }

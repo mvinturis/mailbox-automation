@@ -17,7 +17,7 @@ type Runner struct {
 	Profile *models.Seed
 
 	/* The Chromedp context for tasks */
-	Tasks context.Context
+	Context context.Context
 
 	/* "Virtual" functions */
 	VirtualGetAvailableActivities func() []activity.Activity
@@ -81,13 +81,13 @@ func (self *Runner) ReadMessages(params *models.TaskParams) {
 		}
 
 		// Compute total weights amount
-		totalWeights := 0
+		totalWeights := 1
 		for _, activity := range activities {
 			totalWeights += activity.Weight
 		}
 
 		// Pick one random activity and run it
-		randomWeight := rand.Intn(totalWeights) + 1
+		randomWeight := rand.Intn(totalWeights)
 		for _, activity := range activities {
 			if randomWeight > activity.Weight {
 				randomWeight -= activity.Weight
@@ -97,7 +97,7 @@ func (self *Runner) ReadMessages(params *models.TaskParams) {
 			break
 		}
 
-		chromedp.Run(self.Tasks,
+		chromedp.Run(self.Context,
 			self.RandomSleep(),
 		)
 	}

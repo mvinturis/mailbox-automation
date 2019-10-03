@@ -17,7 +17,7 @@ func NewPinMessages(tasksContext context.Context, weight int) activity.Activity 
 	a := PinMessages{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -33,19 +33,19 @@ func (self *PinMessages) init() {
 }
 
 func (self *PinMessages) IsAvailable() bool {
-
 	if self.IsAvailableMailActionByName("Pin", "Unpin") {
+		fmt.Println("[INFO] PinMessages() is available")
 		return true
 	}
-
+	fmt.Println("[WARN] PinMessages() is not available")
 	return false
 }
 
 func (self *PinMessages) Run() {
-	fmt.Println("[INFO] pin messages")
+	fmt.Println("[DEBUG] PinMessages() running")
 
 	self.SetMailActionByName("Mark as read", "Mark as unread")
 	self.SetMailActionByName("Pin", "Unpin")
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] PinMessages() done")
 }

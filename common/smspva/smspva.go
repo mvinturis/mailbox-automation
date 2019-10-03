@@ -6,12 +6,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const ACCOUNTUSER = "testuser"
 const APIURL = "http://smspva.com/priemnik.php"
 const APIKEY = "apikey=testapykey"
 const SERVICEIDHOTMAIL = "service=opt15"
+const SERVICEIDAOL = "service=opt10"
 const COUNTRYID = "country="
 
 const APIMETHODGETNUMBER = "metod=get_number" // {"response":"1","number":"9871234567","id":25623}
@@ -21,6 +23,7 @@ type GetNumberResponse struct {
 	Response    string `json:"response"`
 	PhoneNumber string `json:"number"`
 	PhoneID     int    `json:"id"`
+	CountryCode string `json:"CountryCode"`
 }
 
 type GetSmsResponse struct {
@@ -34,9 +37,9 @@ type GetSmsResponse struct {
 	Sms         string  `json:"sms"`
 }
 
-func GetPhoneNumber(country string) (phoneNumber, phoneID string) {
+func GetPhoneNumber(serviceCode, country string) (phoneNumber, phoneID, countryCode string) {
 	url := APIURL + "?" + APIKEY +
-		"&" + APIMETHODGETNUMBER + "&" + COUNTRYID + country + "&" + SERVICEIDHOTMAIL
+		"&" + APIMETHODGETNUMBER + "&" + COUNTRYID + country + "&" + serviceCode
 
 	fmt.Println("[INFO] GetPhoneNumber... %s", url)
 
@@ -68,15 +71,16 @@ func GetPhoneNumber(country string) (phoneNumber, phoneID string) {
 	//return results
 	phoneNumber = response.PhoneNumber
 	phoneID = strconv.Itoa(response.PhoneID)
+	countryCode = response.CountryCode
 
-	fmt.Println("[INFO] phone number %s, phone id %s", phoneNumber, phoneID)
+	fmt.Println("[INFO] phone number %s, phone id %s, countryCode %s", phoneNumber, phoneID, countryCode)
 
 	return
 }
 
-func GetSms(country, phoneID string) (sms string) {
+func GetSms(serviceCode, country, phoneID string) (sms string) {
 	url := APIURL + "?" + APIKEY +
-		"&" + APIMETHODGETSMS + "&" + COUNTRYID + country + "&" + SERVICEIDHOTMAIL +
+		"&" + APIMETHODGETSMS + "&" + COUNTRYID + country + "&" + serviceCode +
 		"&id=" + phoneID
 
 	fmt.Println("[INFO] GetSms... %s", url)
@@ -106,10 +110,24 @@ func GetSms(country, phoneID string) (sms string) {
 	var response GetSmsResponse
 	json.Unmarshal([]byte(responseText), &response)
 
-	//return results
-	sms = response.Sms
+	convertedCode, err := strconv.Atoi(response.Sms)
+	if err == nil && convertedCode > 0 {
+		//return results
+		sms = response.Sms
+		fmt.Println("[INFO] sms %s", sms)
+		return
+	}
 
-	fmt.Println("[INFO] sms %s", sms)
+	for _, code := range strings.Split(response.Text, " ") {
+		convertedCode, err = strconv.Atoi(code)
+		if err == nil && convertedCode > 0 {
+			//return results
+			sms = code
+			fmt.Println("[INFO] sms %s", sms)
+			return
+		}
+	}
 
+	// error
 	return
 }

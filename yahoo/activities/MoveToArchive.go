@@ -19,7 +19,7 @@ func NewMoveToArchive(tasksContext context.Context, weight int) activity.Activit
 	a := MoveToArchive{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -37,29 +37,34 @@ func (self *MoveToArchive) init() {
 func (self *MoveToArchive) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//button[@title="Archive the selected conversations"]')[0].type`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] MoveToArchive() not available: %s", err.Error())
 		return false
 	}
+	
 	// Check if the Archive button is disabled
-	err = chromedp.Run(self.Tasks,
+	err = chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//button[@title="Archive the selected conversations"][@disabled]')[0].type`, &value),
 	)
-	if err == nil {
+	if err != nil {
+		fmt.Println("[WARN] MoveToArchive() not available: %s", err.Error())
 		return false
 	}
 
+	fmt.Println("[INFO] MoveToArchive() available")
 	return true
 }
 
 func (self *MoveToArchive) Run() {
-	fmt.Println("[INFO] Move to archive")
+	fmt.Println("[INFO] MoveToArchive() running")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click Archive
 		chromedp.Click(`//button[@title="Archive the selected conversations"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
-	fmt.Println("[INFO] done")
+	
+	fmt.Println("[INFO] MoveToArchive() done")
 }

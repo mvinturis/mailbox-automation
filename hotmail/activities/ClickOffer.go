@@ -18,7 +18,7 @@ func NewClickOffer(tasksContext context.Context, weight int) activity.Activity {
 	a := ClickOffer{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -36,30 +36,31 @@ func (self *ClickOffer) init() {
 func (self *ClickOffer) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//div[@class="wide-content-host"]/descendant::a[4]')[0].href`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] ClickOffer() not available: %s", err.Error())
 		return false
 	}
-
+	fmt.Println("[INFO] ClickOffer() is available")
 	return true
 }
 
 func (self *ClickOffer) Run() {
 	var value string
-	fmt.Println("[INFO] click offer...")
+	fmt.Println("[DEBUG] ClickOffer() running")
 
 	// Get the first new tab that isn't blank.
-	ch := chromedp.WaitNewTarget(self.Tasks, func(info *target.Info) bool {
+	ch := chromedp.WaitNewTarget(self.Context, func(info *target.Info) bool {
 		return info.URL != ""
 	})
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click on first link
 		chromedp.EvaluateAsDevTools(`$x('//div[@class="wide-content-host"]/descendant::a[4]')[0].click()`, &value), self.RandomSleep(),
 	)
-	newTab, cancel := chromedp.NewContext(self.Tasks, chromedp.WithTargetID(<-ch))
+	newTab, cancel := chromedp.NewContext(self.Context, chromedp.WithTargetID(<-ch))
 
 	chromedp.Run(newTab,
 		// Do nothing
@@ -69,5 +70,5 @@ func (self *ClickOffer) Run() {
 	// Close newTab
 	cancel()
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] ClickOffer() done")
 }

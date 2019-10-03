@@ -16,7 +16,7 @@ type Activity struct {
 	Weight int
 
 	/* The Chromedp context for tasks */
-	Tasks context.Context
+	Context context.Context
 
 	/* "Virtual" functions */
 	VirtualIsAvailable func() bool

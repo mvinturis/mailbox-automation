@@ -21,7 +21,7 @@ func NewMoveAllNonCampaignToArchive(tasksContext context.Context, weight int, se
 	a := MoveAllNonCampaignToArchive{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 		searchKeyword,
@@ -38,32 +38,36 @@ func (self *MoveAllNonCampaignToArchive) init() {
 }
 
 func (self *MoveAllNonCampaignToArchive) IsAvailable() bool {
-
 	if self.SearchKeyword == "" {
+		fmt.Println("[ERROR] MoveAllNonCampaignToArchive(): search keyword is empty!")
 		return false
 	}
-
+	fmt.Println("[INFO] MoveAllNonCampaignToArchive() available")
 	return true
 }
 
 func (self *MoveAllNonCampaignToArchive) Run() {
-	fmt.Println("[INFO] Move all non campaign to archive")
+	fmt.Println("[DEBUG] MoveAllNonCampaignToArchive() running")
 
 	var value string
 
 	self.ActivityBase.SetSearchKeyword("-"+self.SearchKeyword, "Inbox")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Select all messages
 		chromedp.EvaluateAsDevTools(`$x('//div[@aria-label="Select all messages"]/descendant::i[@data-icon-name="StatusCircleCheckmark"]')[0].click()`, &value), self.RandomSleep(),
-		// Click on more actions
-		chromedp.Click(`//button[@name="Move to"]`, chromedp.NodeVisible), self.RandomSleep(),
-		// Click Flag
-		chromedp.Click(`//div[@title="Archive"][@role="menuitemcheckbox"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
+	chromedp.Run(self.Context,
+		// Click on more actions
+		chromedp.Click(`//button[@name="Move to"]`), self.RandomSleep(),
+		// Click Flag
+		chromedp.Click(`//div[@title="Archive"][@role="menuitemcheckbox"]`), self.RandomSleep(),
+		chromedp.Click(`//*[@name="Archive"]/div`), self.RandomSleep(),
+	)
 
 	// Activity runs once
 	self.SearchKeyword = ""
+	
+	fmt.Println("[INFO] MoveAllNonCampaignToArchive() done")
 }

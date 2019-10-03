@@ -17,7 +17,7 @@ func NewStarMessages(tasksContext context.Context, weight int) activity.Activity
 	a := StarMessages{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -33,17 +33,16 @@ func (self *StarMessages) init() {
 }
 
 func (self *StarMessages) IsAvailable() bool {
-
 	if self.IsAvailableMailActionByName("Star", "Clear star") {
+		fmt.Println("[INFO] StarMessages() available")
 		return true
 	}
-
+	fmt.Println("[WARN] StarMessages() not available")
 	return false
 }
 
 func (self *StarMessages) Run() {
-	fmt.Println("[INFO] Star messages")
-
+	fmt.Println("[INFO] StarMessages() running")
 	self.SetMailActionByName("Star", "Clear star")
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] StarMessages() done")
 }

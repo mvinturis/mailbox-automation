@@ -15,7 +15,7 @@ func NewMarkAsRead(tasksContext context.Context, weight int) activity.Activity {
 	a := MarkAsRead{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -31,18 +31,17 @@ func (self *MarkAsRead) init() {
 }
 
 func (self *MarkAsRead) IsAvailable() bool {
-
-	if self.IsAvailableMailActionByName("Mark as read", "Mark as unread") {
+	if self.IsAvailableMailActionByName("Mark Read", "Mark Unread") {
+		fmt.Println("[INFO] MarkAsRead() available")
 		return true
 	}
 
+	fmt.Println("[WARN] MarkAsRead() not available")
 	return false
 }
 
 func (self *MarkAsRead) Run() {
-	fmt.Println("[INFO] mark as read")
-
-	self.SetMailActionByName("Mark as read", "Mark as unread")
-
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] MarkAsRead() running")
+	self.SetMailActionByName("Mark Read", "Mark Unread")
+	fmt.Println("[INFO] MarkAsRead() done")
 }

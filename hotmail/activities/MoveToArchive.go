@@ -19,7 +19,7 @@ func NewMoveToArchive(tasksContext context.Context, weight int) activity.Activit
 	a := MoveToArchive{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -37,25 +37,27 @@ func (self *MoveToArchive) init() {
 func (self *MoveToArchive) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('//button[@name="Move to"]')[0].type`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] MoveToArchive() not available: %s", err.Error())
 		return false
 	}
-
+	fmt.Println("[INFO] MoveToArchive() is available")
 	return true
 }
 
 func (self *MoveToArchive) Run() {
-	fmt.Println("[INFO] Move to archive")
+	fmt.Println("[DEBUG] MoveToArchive() running")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Click on more actions
 		chromedp.Click(`//button[@name="Move to"]`, chromedp.NodeVisible), self.RandomSleep(),
 
 		// Click Flag
 		chromedp.Click(`//div[@title="Archive"][@role="menuitemcheckbox"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
-	fmt.Println("[INFO] done")
+	
+	fmt.Println("[INFO] MoveToArchive() done")
 }

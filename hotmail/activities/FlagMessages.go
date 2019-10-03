@@ -17,7 +17,7 @@ func NewFlagMessages(tasksContext context.Context, weight int) activity.Activity
 	a := FlagMessages{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 	}
@@ -33,17 +33,18 @@ func (self *FlagMessages) init() {
 }
 
 func (self *FlagMessages) IsAvailable() bool {
-
 	if self.IsAvailableMailActionByName("Flag", "Unflag") {
+		fmt.Println("[INFO] FlagMessages() is available")
 		return true
 	}
-
+	fmt.Println("[WARN] FlagMessages() is not available")
 	return false
 }
 
 func (self *FlagMessages) Run() {
-	fmt.Println("[INFO] Flag messages")
+	fmt.Println("[DEBUG] FlagMessages() running")
 
 	self.SetMailActionByName("Flag", "Unflag")
-	fmt.Println("[INFO] done")
+	
+	fmt.Println("[INFO] FlagMessages() done")
 }

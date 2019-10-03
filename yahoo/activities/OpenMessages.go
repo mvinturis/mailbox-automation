@@ -21,7 +21,7 @@ func NewOpenMessages(tasksContext context.Context, weight int, searchKeyword str
 	a := OpenMessages{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 		searchKeyword,
@@ -40,18 +40,19 @@ func (self *OpenMessages) init() {
 func (self *OpenMessages) IsAvailable() bool {
 	var value string
 
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		chromedp.EvaluateAsDevTools(`$x('((//a[@data-test-folder-name="Inbox"])[1]/span)[2]/span/text()')[0].data`, &value),
 	)
 	if err != nil {
+		fmt.Println("[WARN] OpenMessages() not available: %s", err.Error())
 		return false
 	}
-
+	fmt.Println("[INFO] OpenMessages() available")
 	return true
 }
 
 func (self *OpenMessages) Run() {
-	fmt.Println("[INFO] open message... ")
+	fmt.Println("[INFO] OpenMessages() running")
 	var value string
 
 	self.ActivityBase.SetSearchKeyword(self.SearchKeyword, "Inbox")
@@ -60,12 +61,12 @@ func (self *OpenMessages) Run() {
 	selectorXPath := `//a[@data-test-id="message-list-item"]/descendant::button[@data-test-id="icon-btn-checkbox"][@aria-label="Select message"][1]`
 
 	alreadySelectedXPath := `$x('//a[@data-test-id="message-list-item"]/descendant::button[@data-test-id="icon-btn-checkbox"][@aria-label="Deselect message"]')[0].type`
-	err := chromedp.Run(self.Tasks,
+	err := chromedp.Run(self.Context,
 		// Check if a message is already selected
 		chromedp.EvaluateAsDevTools(alreadySelectedXPath, &value),
 	)
 	if err != nil {
-		chromedp.Run(self.Tasks,
+		chromedp.Run(self.Context,
 			// Open message
 			chromedp.Click(selectorXPath, chromedp.NodeVisible), self.RandomSleep(),
 			// FIXME: this does not work
@@ -76,5 +77,5 @@ func (self *OpenMessages) Run() {
 		self.SetMailActionByName("Mark as read", "Mark as unread")
 	}
 
-	fmt.Println("[INFO] done")
+	fmt.Println("[INFO] OpenMessages() done")
 }

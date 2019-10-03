@@ -21,7 +21,7 @@ func NewMoveAllNonCampaignToArchive(tasksContext context.Context, weight int, se
 	a := MoveAllNonCampaignToArchive{
 		ActivityBase{
 			activity.Activity{
-				Weight: weight, Tasks: tasksContext,
+				Weight: weight, Context: tasksContext,
 			},
 		},
 		searchKeyword,
@@ -38,28 +38,28 @@ func (self *MoveAllNonCampaignToArchive) init() {
 }
 
 func (self *MoveAllNonCampaignToArchive) IsAvailable() bool {
-
 	if self.SearchKeyword == "" {
+		fmt.Println("[ERROR] MoveAllNonCampaignToArchive(): search keyword is empty!")
 		return false
 	}
-
+	fmt.Println("[INFO] MoveAllNonCampaignToArchive() available")
 	return true
 }
 
 func (self *MoveAllNonCampaignToArchive) Run() {
-	fmt.Println("[INFO] Move all non campaign to archive")
+	fmt.Println("[INFO] MoveAllNonCampaignToArchive() running")
 
 	self.ActivityBase.SetSearchKeyword("-"+self.SearchKeyword, "Inbox")
 
-	chromedp.Run(self.Tasks,
+	chromedp.Run(self.Context,
 		// Select all messages
 		chromedp.Click(`//button[@aria-label="Select all messages"]`, chromedp.NodeVisible), self.RandomSleep(),
 		// Click Archive
 		chromedp.Click(`//button[@title="Archive the selected conversations"]`, chromedp.NodeVisible), self.RandomSleep(),
 	)
 
-	fmt.Println("[INFO] done")
-
 	// Activity runs once
 	self.SearchKeyword = ""
+
+	fmt.Println("[INFO] MoveAllNonCampaignToArchive() done")
 }
