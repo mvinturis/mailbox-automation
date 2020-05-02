@@ -59,7 +59,7 @@ func (self *Runner) RandomSleep() chromedp.Action {
 	return chromedp.Sleep(time.Millisecond * time.Duration(rand.Intn(5000)+500))
 }
 
-// ReadMessages() generic care ar putea functiona pentru orice runner de chromedp, pe baza de activitati + ponderi
+// ReadMessages() runs the available activities
 func (self *Runner) ReadMessages(params *models.TaskParams) {
 	fmt.Println("[INFO] read messages... ")
 
