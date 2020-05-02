@@ -27,7 +27,7 @@ type Runner struct {
 	VirtualInitActivities         func(*models.TaskParams)
 	VirtualReadMessages           func(*models.TaskParams)
 
-	// metoda principala pentru a "porni" un runner cu behaviour-ul dorit + parametrii
+	// Virtual method to start the runner behaviour + params
 	VirtualStart func(behaviour string, params *models.TaskParams)
 }
 
